@@ -1,12 +1,20 @@
 ---
-description: Turn a vague request into a structured ticket via a local LLM, then build it — /promptfit <your prompt>
-argument-hint: <your vague prompt>
+description: Turn a vague request into a structured ticket via a local LLM, then build it — /promptfit [-y] <your prompt>
+argument-hint: "[-y|--auto] <your vague prompt>"
 disable-model-invocation: true
 ---
 
 The user invoked `/promptfit` to refine a vague request into a structured, actionable ticket BEFORE you implement it. The point: a cheap local model does the scoping work (clear acceptance criteria, explicit out-of-scope) so you execute against a tight spec instead of guessing.
 
 The raw request is: $ARGUMENTS
+
+## Step 0 — Parse the bypass flag
+
+If the request begins with `-y`, `--yes`, or `--auto` (a leading flag token), set AUTO mode and strip that token — the rest is the actual prompt. Otherwise AUTO is off.
+- AUTO **off** (default): show the ticket and wait for the developer's approval before implementing (Step 5).
+- AUTO **on**: skip the approval gate — show the ticket, then implement immediately without asking.
+
+Only treat it as the flag when it's a leading token (e.g. `/promptfit -y add dark mode`). A `-y` buried mid-sentence is part of the prompt, not the flag.
 
 ## Step 1 — Pick the installed local model
 
@@ -31,14 +39,14 @@ Total budget: at most ~3-4 files (1-2 implementation + manifest + CLAUDE.md). Mo
 
 ## Step 3 — Refine via the local model
 
-Run promptfit with the detected model AND the context files you found. Try these in order, first that works (replace `<MODEL>`; add one `--context` per file):
+Run promptfit with the detected model AND the context files you found. Use the flag-stripped prompt from Step 0 (NOT the raw `-y ...` token) as the quoted argument. Try these in order, first that works (replace `<PROMPT>` with the stripped request, `<MODEL>` with the tag; add one `--context` per file):
 
 ```bash
 # A) global install (fastest) — impl file(s) + manifest so commands are real
-pf '$ARGUMENTS' --model <MODEL> --context lib/foo.ts package.json CLAUDE.md
+pf '<PROMPT>' --model <MODEL> --context lib/foo.ts package.json CLAUDE.md
 
 # B) no global install — run via npx
-npx -y @wecko-ai/promptfit '$ARGUMENTS' --model <MODEL> --context lib/foo.ts package.json
+npx -y @wecko-ai/promptfit '<PROMPT>' --model <MODEL> --context lib/foo.ts package.json
 ```
 
 If Step 2 found no relevant files, run it without `--context`.
@@ -74,10 +82,21 @@ Ticket format:
 - Out of scope / over-engineering to resist
 ```
 
-## Step 5 — Show, then build
+## Step 5 — Show the ticket and WAIT for approval (default gate)
 
-1. Show the user the refined ticket (compact — title + acceptance criteria + Do NOT is enough; don't dump the whole thing if it's long).
-2. If the ticket surfaced a genuine ambiguity that changes the approach, ask one tight question before coding. Otherwise proceed.
-3. Implement against the ticket. Follow the acceptance criteria exactly, respect the "Do NOT" section, run the named checks, and don't expand scope beyond the ticket.
+**If AUTO mode is on (Step 0):** skip the gate. Show the ticket, then implement it straight away (the implementation rules in point 3 below still apply). Do not ask for approval.
 
-Keep it tight: the user typed one line because they wanted action, not a conversation.
+Otherwise (default), the ticket is the contract — do NOT start implementing until the developer approves it.
+
+1. Show the refined ticket — enough to judge it: Task, Requirements, Acceptance Criteria, and Do NOT. (Trim only genuinely redundant lines; the developer needs to actually evaluate the spec, not a teaser.)
+2. Then STOP and explicitly ask for a decision, e.g.:
+   > Approve this ticket? **proceed** to implement · **edit** (tell me what to change) · **cancel**
+   If anything in the ticket looks ambiguous or wrong to you, surface it here in one line rather than waiting for the developer to spot it.
+3. Wait for their answer. Do not write or edit any code until they reply:
+   - **proceed / yes / go** → implement against the ticket. Follow the acceptance criteria exactly, respect the "Do NOT" section, run the named checks, and don't expand scope beyond the ticket.
+   - **edit / change X** → apply their adjustment. If it's a substantive scope change, re-run promptfit (Step 3) with the amended request; for a small tweak, just edit the ticket inline. Then show it and ask again.
+   - **cancel / no** → stop. Don't implement. Leave the ticket shown so they can copy it elsewhere.
+
+This approval gate is the default and applies even when the ticket looks obviously correct — the developer asked for a spec to review, not an autopilot. (The one exception is the bypass flag — see top of this skill.)
+
+Once approved, keep it tight: implement the ticket, don't turn it into a conversation.
