@@ -8,31 +8,42 @@ The user invoked `/promptfit` to refine a vague request into a structured, actio
 
 The raw request is: $ARGUMENTS
 
-## Step 1 — Refine via the local model
+## Step 1 — Pick the installed local model
 
-Run promptfit to get a structured ticket. Try these in order and use the FIRST that works:
+promptfit defaults to `qwen3:8b`, which may not be the model the user actually pulled. First find an installed Ollama model and use it explicitly:
+
+```bash
+ollama list   # first column = model tags already on disk
+```
+
+Take the first non-`NAME` tag (e.g. `qwen3:14b-q4_K_M`) and pass it via `--model` in Step 2. If `ollama list` errors (Ollama not installed) or shows no models, skip to Step 3 (fallback) and tell the user to run `modelfit --yes` to install the best model for their machine.
+
+## Step 2 — Refine via the local model
+
+Run promptfit with the detected model. Try these in order and use the FIRST that works (replace `<MODEL>` with the tag from Step 1):
 
 ```bash
 # A) global install (fastest)
-pf '$ARGUMENTS'
+pf '$ARGUMENTS' --model <MODEL>
 
 # B) no global install — run via npx
-npx -y @wecko-ai/promptfit '$ARGUMENTS'
+npx -y @wecko-ai/promptfit '$ARGUMENTS' --model <MODEL>
 ```
 
 If the current repo would help (it usually does), add file context so the ticket references real paths:
 ```bash
-pf '$ARGUMENTS' --context path/to/relevant/file.ts
+pf '$ARGUMENTS' --model <MODEL> --context path/to/relevant/file.ts
 ```
 
-Capture the structured ticket from stdout. Common failures and what they mean:
+Capture the structured ticket from stdout. Note: reasoning models (Qwen3) think first, so a refinement can take 30-90s — that's normal. Common failures:
 - `command not found` / npx cannot resolve the package → promptfit isn't available locally.
-- `Cannot connect to LLM` / `ECONNREFUSED` → Ollama isn't running (`ollama serve`) or the model isn't pulled (`ollama pull qwen3:8b`, or run `modelfit --yes` to install the best model for this machine).
+- `Cannot connect to LLM` / `ECONNREFUSED` → Ollama isn't running (`ollama serve`).
+- `model ... not found` → the tag is wrong; re-check `ollama list`.
 
-## Step 2 — If the local model is unavailable
+## Step 3 — If the local model is unavailable
 
 Do NOT abort. Fall back: structure the ticket YOURSELF in the same format below (this still gives the user scoping discipline), then tell them once, briefly, how to enable the faster local path:
-> Tip: install the local refiner for cheaper pre-processing — `npm i -g @wecko-ai/promptfit` and `ollama pull qwen3:8b` (or `modelfit --yes`).
+> Tip: install the local refiner for cheaper pre-processing — `npm i -g @wecko-ai/promptfit` and `modelfit --yes` (installs the best model for your machine).
 
 Ticket format:
 ```
@@ -55,7 +66,7 @@ Ticket format:
 - Out of scope / over-engineering to resist
 ```
 
-## Step 3 — Show, then build
+## Step 4 — Show, then build
 
 1. Show the user the refined ticket (compact — title + acceptance criteria + Do NOT is enough; don't dump the whole thing if it's long).
 2. If the ticket surfaced a genuine ambiguity that changes the approach, ask one tight question before coding. Otherwise proceed.
