@@ -1,0 +1,18 @@
+{
+  "name": "wecko-skills",
+  "owner": {
+    "name": "Wecko",
+    "email": "contact@wecko.ai"
+  },
+  "metadata": {
+    "description": "Claude Code skills by Wecko (wecko.ai)."
+  },
+  "plugins": [
+    {
+      "name": "closing",
+      "source": "./plugins/closing",
+      "description": "Wrap up a Claude Code session cleanly: persist memory, refresh CLAUDE.md, flag loose ends.",
+      "version": "1.0.0"
+    }
+  ]
+}
