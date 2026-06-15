@@ -13,6 +13,12 @@
       "source": "./plugins/closing",
       "description": "Wrap up a Claude Code session cleanly: persist memory, refresh CLAUDE.md, flag loose ends.",
       "version": "1.0.0"
+    },
+    {
+      "name": "promptfit",
+      "source": "./plugins/promptfit",
+      "description": "Refine a vague request into a structured ticket using a local LLM, then implement it. /promptfit <your prompt>",
+      "version": "1.0.0"
     }
   ]
 }
