@@ -1,7 +1,7 @@
 {
   "name": "promptfit",
   "description": "Refine a vague request into a structured ticket using a local LLM, then implement it. /promptfit <your prompt>",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "author": {
     "name": "Wecko",
     "url": "https://wecko.ai"

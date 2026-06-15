@@ -23,21 +23,22 @@ Take the first non-`NAME` tag (e.g. `qwen3:14b-q4_K_M`) and pass it via `--model
 The local model has NO repo knowledge. Without context it invents plausible-but-wrong file paths; with the right files it produces a repo-accurate ticket (correct files, functions, and test commands). So invest a few seconds here.
 
 1. Pull concrete nouns from the request — feature names, symbols, filenames, UI elements (e.g. "search bar", "login button", "ranking").
-2. Find the 1-3 files most likely to change. Use the fast tools you have: Grep for those terms, Glob for likely filenames, and skim `package.json` scripts + CLAUDE.md for the project's test/build commands. Prefer the actual implementation file over tests or types.
-3. If the request is plainly repo-agnostic (e.g. "write a bash script to rename files"), skip context — there's nothing to attach.
+2. Find the 1-2 implementation files most likely to change. Use the fast tools you have: Grep for those terms, Glob for likely filenames. Prefer the actual implementation file over tests or types.
+3. ALSO attach the project's manifest so the ticket's acceptance criteria use REAL commands, not invented ones. The local model cannot guess your test script — if it isn't in context it WILL hallucinate one (e.g. `npm run test:recommend` when the real script is `npm run audit:hardware`). Include whichever exist: `package.json` (or `pyproject.toml`/`Cargo.toml`/`go.mod`/`Makefile`) and `CLAUDE.md`.
+4. If the request is plainly repo-agnostic (e.g. "write a bash script to rename files"), skip context entirely.
 
-Pick at most 3 files. More context = slower + noisier, not better. Don't read whole large files just to choose; the filenames and a grep hit are enough.
+Total budget: at most ~3-4 files (1-2 implementation + manifest + CLAUDE.md). More context = slower + noisier, not better. Don't read whole large files just to choose; filenames and a grep hit are enough.
 
 ## Step 3 — Refine via the local model
 
 Run promptfit with the detected model AND the context files you found. Try these in order, first that works (replace `<MODEL>`; add one `--context` per file):
 
 ```bash
-# A) global install (fastest)
-pf '$ARGUMENTS' --model <MODEL> --context src/foo.ts src/bar.ts
+# A) global install (fastest) — impl file(s) + manifest so commands are real
+pf '$ARGUMENTS' --model <MODEL> --context lib/foo.ts package.json CLAUDE.md
 
 # B) no global install — run via npx
-npx -y @wecko-ai/promptfit '$ARGUMENTS' --model <MODEL> --context src/foo.ts
+npx -y @wecko-ai/promptfit '$ARGUMENTS' --model <MODEL> --context lib/foo.ts package.json
 ```
 
 If Step 2 found no relevant files, run it without `--context`.
