@@ -10,9 +10,9 @@
 #   echo "prompt" | office-agent <agent|model> -   prompt from stdin
 # Flags: --max-turns N (default 40), --json (output-format json)
 #
-# Roster: lead=qwen3.8-max-preview ds=deepseek-v4-pro glm=glm-5.2
-#         k2=kimi-for-coding flash=qwen3.6-flash
-# Logs: ~/.claude/office-logs/runs.jsonl
+# Roster: lead=Tanaka/tnk=qwen3.8-max-preview  ds=Suzuki/suz=deepseek-v4-pro
+#         glm=Kenji/ken=glm-5.2  k2=Yuki/yuk=kimi-for-coding  flash=Hayate/hay=qwen3.6-flash
+# Logs: ~/.claude/office-logs/runs.jsonl  Liveness: ~/.claude/office-logs/active/*.json
 #
 # Gotcha: the MaaS /v1/responses endpoint only serves qwen models. LiteLLM routes
 # openai-provider requests with thinking enabled to /responses, so glm-5.2 and
@@ -22,6 +22,7 @@
 set -u
 
 LOG_DIR="$HOME/.claude/office-logs"
+ACTIVE_DIR="$LOG_DIR/active"
 LOG_FILE="$LOG_DIR/runs.jsonl"
 PLIST="$HOME/Library/LaunchAgents/ai.wecko.litellm-qwen.plist"
 PROXY_HEALTH="http://127.0.0.1:10101/health/liveliness"
@@ -29,8 +30,11 @@ PROXY_HEALTH="http://127.0.0.1:10101/health/liveliness"
 typeset -A ROSTER
 ROSTER=(lead qwen3.8-max-preview ds deepseek-v4-pro glm glm-5.2 k2 kimi-for-coding flash qwen3.6-flash)
 
+typeset -A ALIASES
+ALIASES=(tanaka lead tnk lead suzuki ds suz ds kenji glm ken glm yuki k2 yuk k2 hayate flash hay flash)
+
 usage() {
-  echo "usage: office-agent <lead|ds|glm|k2|flash|model-id> [--max-turns N] [--json] \"prompt\" | -f file | -" >&2
+  echo "usage: office-agent <lead|ds|glm|k2|flash|tanaka|tnk|suzuki|suz|kenji|ken|yuki|yuk|hayate|hay|model-id> [--max-turns N] [--json] \"prompt\" | -f file | -" >&2
   exit 2
 }
 
@@ -57,7 +61,13 @@ if [[ -n "$prompt_file" ]]; then
 fi
 [[ -z "$prompt" ]] && usage
 
-model="${ROSTER[$target]:-$target}"
+# Resolve: lowercase input -> ALIASES -> canonical roster key, then ROSTER -> model id
+target_lower="${(L)target}"
+resolved_key="${ALIASES[$target_lower]:-$target_lower}"
+model="${ROSTER[$resolved_key]:-$resolved_key}"
+# canonical_key is what we store in state/log (the real roster key, not the alias)
+canonical_key="${ALIASES[$target_lower]:-$ROSTER[$target_lower]:+$target_lower}"
+canonical_key="${canonical_key:-$target}"
 
 # Route: kimi models go direct to api.kimi.com/coding, everything else via LiteLLM.
 if [[ "$model" == k3* || "$model" == kimi-* ]]; then
@@ -79,7 +89,7 @@ else
   auth_token="sk-local-qwen"
 fi
 
-mkdir -p "$LOG_DIR"
+mkdir -p "$LOG_DIR" "$ACTIVE_DIR"
 ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 # glm-5.2 / deepseek-v4-pro: no thinking (would be routed to /responses -> upstream rejects)
@@ -87,6 +97,15 @@ think_env=()
 case "$model" in
   glm-*|deepseek-*) think_env=(MAX_THINKING_TOKENS=0) ;;
 esac
+
+# Compute prompt_head BEFORE the claude call (used in both liveness file and log)
+prompt_head="$(print -r -- "$prompt" | head -c 120 | tr '\n' ' ' | sed 's/"/\\"/g')"
+
+# Write liveness state file so statusline can poll for running agents
+STATE_FILE="$ACTIVE_DIR/${canonical_key}-$$.json"
+printf '{"agent":"%s","model":"%s","pid":%d,"start":%d,"prompt_head":"%s"}\n' \
+  "$canonical_key" "$model" "$$" "$(date +%s)" "$prompt_head" > "$STATE_FILE"
+trap 'rm -f "$STATE_FILE"' EXIT INT TERM
 
 env "${think_env[@]}" \
 ANTHROPIC_BASE_URL="$base_url" \
@@ -101,8 +120,9 @@ ENABLE_TOOL_SEARCH="true" \
 claude -p --output-format "$outfmt" --dangerously-skip-permissions --max-turns "$max_turns" "$prompt"
 rc=$?
 
-prompt_head="$(print -r -- "$prompt" | head -c 120 | tr '\n' ' ' | sed 's/"/\\"/g')"
+rm -f "$STATE_FILE"
+
 printf '{"ts":"%s","agent":"%s","model":"%s","cwd":"%s","exit":%d,"prompt_head":"%s"}\n' \
-  "$ts" "$target" "$model" "$PWD" "$rc" "$prompt_head" >> "$LOG_FILE"
+  "$ts" "$canonical_key" "$model" "$PWD" "$rc" "$prompt_head" >> "$LOG_FILE"
 
 exit $rc

@@ -24,7 +24,7 @@
       "name": "office",
       "source": "./plugins/office",
       "description": "Office mode: the session model bosses a multi-model agent roster (qwen3.8, deepseek-v4-pro, glm-5.2, kimi-for-coding, qwen3.6-flash) with cross-family review. /office to activate.",
-      "version": "1.0.0"
+      "version": "1.1.0"
     }
   ]
 }

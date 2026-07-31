@@ -21,14 +21,16 @@ executes. This overrides classic Agent-tool delegation for app-building work.
 
 ## Roster
 
-| Agent | Model | Credit pool | Role |
-|---|---|---|---|
-| boss | you (session) | — | judgment, planning, synthesis, final review |
-| `lead` | qwen3.8-max-preview | Qwen Token Plan | main executor: features, multi-file edits |
-| `ds` | deepseek-v4-pro | Qwen Token Plan | executor B + adversarial reviewer (no thinking) |
-| `glm` | glm-5.2 | Qwen Token Plan | executor C + second reviewer (no thinking) |
-| `k2` | kimi-for-coding | Kimi plan | fallback executor when the Qwen pool throttles |
-| `flash` | qwen3.6-flash | Qwen Token Plan | mechanical: bulk transforms, inventories, checks |
+| Agent | Name | Code | Model | Credit pool | Role |
+|---|---|---|---|---|---|
+| boss | — | — | you (session) | — | judgment, planning, synthesis, final review |
+| `lead` | Tanaka | `tnk` | qwen3.8-max-preview | Qwen Token Plan | main executor: features, multi-file edits |
+| `ds` | Suzuki | `suz` | deepseek-v4-pro | Qwen Token Plan | executor B + adversarial reviewer (no thinking) |
+| `glm` | Kenji | `ken` | glm-5.2 | Qwen Token Plan | executor C + second reviewer (no thinking) |
+| `k2` | Yuki | `yuk` | kimi-for-coding | Kimi plan | fallback executor when the Qwen pool throttles |
+| `flash` | Hayate | `hay` | qwen3.6-flash | Qwen Token Plan | mechanical: bulk transforms, inventories, checks |
+
+Agents can be addressed by roster key (`lead`), name (`Tanaka`), or code (`tnk`).
 
 ## Spawn
 
@@ -64,6 +66,25 @@ An office-agent spawn has ZERO session context. Every prompt MUST contain:
 - architecture / design decisions
 - final synthesis and user-facing answers
 - deep single-threaded debugging
+
+## Statusline integration
+
+While an agent is running, the office-agent script writes a liveness state file to
+`~/.claude/office-logs/active/<agent>-<pid>.json`:
+
+```json
+{"agent":"lead","model":"qwen3.8-max-preview","pid":12345,"start":1753987200,"prompt_head":"Implement the login flow..."}
+```
+
+- `agent` — canonical roster key (lead, ds, glm, k2, flash)
+- `model` — resolved model id
+- `pid` — process id (check liveness with `kill -0`)
+- `start` — epoch seconds (compute elapsed time)
+- `prompt_head` — first 120 chars of the prompt
+
+The file is removed on exit (normal, interrupt, or terminate). A statusline can poll
+this directory to show which agents are running and how long they've been active.
+Elapsed time is a proxy — `claude -p` exposes no real progress.
 
 ## Limits and gotchas
 
