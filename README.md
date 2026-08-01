@@ -29,24 +29,9 @@ npm i -g @wecko-ai/promptfit
 ollama pull qwen3:8b      # or: modelfit --yes  (installs the best model for your machine)
 ```
 
-## `/office` — boss a multi-model agent roster
+## `/office` — moved to its own repo
 
-Opt-in Office mode: your session model stays the **boss** (judgment, planning, final review) and delegates execution to a roster of headless agents running under *other* models, with cross-model-family review (author != reviewer, so a model never grades its own biases).
-
-| Agent | Model | Role |
-|---|---|---|
-| `lead` | qwen3.8-max-preview | main executor |
-| `ds` | deepseek-v4-pro | executor B + adversarial reviewer |
-| `glm` | glm-5.2 | executor C + second reviewer |
-| `k2` | kimi-for-coding | fallback executor (separate credit pool) |
-| `flash` | qwen3.6-flash | mechanical bulk work |
-
-```
-/office                       # activate for the session
-/office off                   # deactivate
-```
-
-Agents are spawned via the bundled `office-agent` script (headless `claude -p` routed through a local LiteLLM proxy or the Kimi endpoint). Requires: a Qwen Token Plan key (`~/.qwen/.env`) + LiteLLM serving the roster models on `127.0.0.1:10101`; optionally a Kimi key (`~/.config/kimi/api_key`) for `k2`. Built for heavy multi-account setups — see the SKILL.md requirements section.
+Office mode (boss a multi-model agent roster with cross-family review) now lives at **[Wecko-ai/claude-office](https://github.com/Wecko-ai/claude-office)**. Install from there.
 
 ## Install (plugin marketplace)
 
@@ -54,10 +39,9 @@ Agents are spawned via the bundled `office-agent` script (headless `claude -p` r
 /plugin marketplace add Wecko-ai/claude-skills
 /plugin install closing@wecko-skills
 /plugin install promptfit@wecko-skills
-/plugin install office@wecko-skills
 ```
 
-Then run `/closing`, `/promptfit` or `/office` in any session.
+Then run `/closing` or `/promptfit` in any session.
 
 ## Install (manual, no plugins)
 
@@ -65,10 +49,9 @@ Then run `/closing`, `/promptfit` or `/office` in any session.
 git clone https://github.com/Wecko-ai/claude-skills.git /tmp/wecko-skills
 cp -r /tmp/wecko-skills/plugins/closing   ~/.claude/skills/closing
 cp -r /tmp/wecko-skills/plugins/promptfit ~/.claude/skills/promptfit
-cp -r /tmp/wecko-skills/plugins/office    ~/.claude/skills/office
 ```
 
-Then run `/closing`, `/promptfit` or `/office`.
+Then run `/closing` or `/promptfit`.
 
 ## License
 
