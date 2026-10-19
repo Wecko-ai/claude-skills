@@ -1,5 +1,14 @@
 # wecko-skills
 
+> **Moved to [Wecko-ai/skills](https://github.com/Wecko-ai/skills).** `promptfit` now lives in [`skills/engineering/promptfit`](https://github.com/Wecko-ai/skills/tree/main/skills/engineering/promptfit), with the rest of my skills. Install:
+>
+> ```bash
+> claude plugin marketplace add Wecko-ai/skills
+> claude plugin install wecko-engineering@wecko-ai
+> ```
+>
+> This repo stays installable but gets no new versions.
+
 Claude Code skills by [Wecko](https://wecko.ai).
 
 ## `/closing` — moved to its own repo
